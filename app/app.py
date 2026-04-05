@@ -1,40 +1,23 @@
 import streamlit as st
-import pandas as pd
+import openai
 
-st.title("🚀 AI Job Matcher")
+# Set your API key
+openai.api_key = "YOUR_OPENAI_API_KEY"
 
-# Input
-resume = st.text_area("Paste your resume here")
+st.title("💬 AI Job Assistant")
 
-# Sample jobs (temporary)
-jobs = [
-    {"role": "Data Analyst", "company": "Target", "skills": "sql python power bi"},
-    {"role": "Data Scientist", "company": "Amazon", "skills": "python machine learning aws"},
-    {"role": "BI Analyst", "company": "Optum", "skills": "sql dashboards reporting"},
-]
+user_input = st.text_area("Ask me anything about jobs, resumes, or skills:")
 
-def match_score(resume, job_skills):
-    resume_words = set(resume.lower().split())
-    job_words = set(job_skills.split())
-    
-    if len(job_words) == 0:
-        return 0
-    
-    return round(len(resume_words & job_words) / len(job_words) * 100, 2)
+if st.button("Ask"):
 
-if st.button("Find Matches"):
-    results = []
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful career assistant helping students with job applications."},
+            {"role": "user", "content": user_input}
+        ]
+    )
 
-    for job in jobs:
-        score = match_score(resume, job["skills"])
-        results.append({
-            "Role": job["role"],
-            "Company": job["company"],
-            "Match %": score
-        })
+    answer = response["choices"][0]["message"]["content"]
 
-    df = pd.DataFrame(results).sort_values(by="Match %", ascending=False)
-
-    st.subheader("Top Matches")
-    st.dataframe(df)
-    st.bar_chart(df.set_index("Role")["Match %"])
+    st.write(answer)

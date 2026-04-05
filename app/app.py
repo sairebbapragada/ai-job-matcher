@@ -1,23 +1,19 @@
 import streamlit as st
-import openai
+from openai import OpenAI
+import os
 
-# Set your API key
-openai.api_key = "YOUR_OPENAI_API_KEY"
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-st.title("💬 AI Job Assistant")
+st.title("AI Job Assistant")
 
-user_input = st.text_area("Ask me anything about jobs, resumes, or skills:")
+user_input = st.text_input("Ask me about jobs:")
 
-if st.button("Ask"):
-
-    response = openai.ChatCompletion.create(
+if user_input:
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are a helpful career assistant helping students with job applications."},
             {"role": "user", "content": user_input}
         ]
     )
-
-    answer = response["choices"][0]["message"]["content"]
-
-    st.write(answer)
+    
+    st.write(response.choices[0].message.content)

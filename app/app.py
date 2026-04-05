@@ -122,6 +122,69 @@ if st.button("Ask") and user_input:
         ]
     )
 
+    st.write(chat_response.choices[0].message.content)# ------------------------------
+# 🚀 AI Matching Button
+# ------------------------------
+if st.button("🚀 Analyze Resume vs Job"):
+
+    if not resume_text:
+        st.warning("Please upload a resume.")
+    elif not job_desc:
+        st.warning("Please paste a job description.")
+    else:
+        with st.spinner("Analyzing..."):
+
+            prompt = f"""
+You are a professional career coach.
+
+Compare this resume with the job description.
+
+Give:
+1. Match score out of 100
+2. Missing skills
+3. Suggestions to improve resume
+4. Final advice
+
+Resume:
+{resume_text}
+
+Job Description:
+{job_desc}
+"""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            result = response.choices[0].message.content
+
+            st.subheader("📊 AI Analysis")
+            st.write(result)
+
+            score = extract_score(result)
+            st.progress(score)
+            st.success(f"Match Score: {score}%")
+
+# ------------------------------
+# 💬 Chat Assistant
+# ------------------------------
+st.markdown("---")
+st.subheader("💬 Ask Career Questions")
+
+user_input = st.text_input("Ask anything about jobs, resumes, or skills:")
+
+if st.button("Ask") and user_input:
+
+    chat_response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": user_input}
+        ]
+    )
+
     st.write(chat_response.choices[0].message.content)st.set_page_config(page_title="AI Career Assistant", layout="wide")
 
 st.title("🚀 AI Career Assistant")

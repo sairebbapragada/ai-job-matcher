@@ -5,15 +5,15 @@ from openai import OpenAI
 from PyPDF2 import PdfReader
 import re
 
-# ---------------------------
+# ------------------------------
 # 🔑 Load API Key
-# ---------------------------
+# ------------------------------
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ---------------------------
+# ------------------------------
 # 📄 PDF Reader
-# ---------------------------
+# ------------------------------
 def extract_text_from_pdf(file):
     reader = PdfReader(file)
     text = ""
@@ -21,9 +21,9 @@ def extract_text_from_pdf(file):
         text += page.extract_text() or ""
     return text
 
-# ---------------------------
-# 🧠 Extract score from AI text
-# ---------------------------
+# ------------------------------
+# 🧠 Extract Score from AI text
+# ------------------------------
 def extract_score(text):
     match = re.search(r"\b(\d{1,3})\b", text)
     if match:
@@ -31,10 +31,98 @@ def extract_score(text):
         return min(score, 100)
     return 50
 
-# ---------------------------
+# ------------------------------
 # 🎨 UI Setup
-# ---------------------------
+# ------------------------------
 st.set_page_config(page_title="AI Career Assistant", layout="wide")
+
+st.title("🚀 AI Career Assistant")
+st.markdown("### Get resume feedback, job matching, and career guidance")
+
+# ------------------------------
+# 📦 Layout
+# ------------------------------
+col1, col2 = st.columns(2)
+
+# LEFT: Resume Upload
+with col1:
+    st.subheader("📄 Upload Resume")
+    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+
+    resume_text = ""
+    if uploaded_file:
+        resume_text = extract_text_from_pdf(uploaded_file)
+        st.success("Resume uploaded successfully!")
+
+# RIGHT: Job Description
+with col2:
+    st.subheader("💼 Job Description")
+    job_desc = st.text_area("Paste job description here")
+
+# ------------------------------
+# 🚀 AI Matching Button
+# ------------------------------
+if st.button("🚀 Analyze Resume vs Job"):
+
+    if not resume_text:
+        st.warning("Please upload a resume.")
+    elif not job_desc:
+        st.warning("Please paste a job description.")
+    else:
+        with st.spinner("Analyzing..."):
+
+            prompt = f"""
+You are a professional career coach.
+
+Compare this resume with the job description.
+
+Give:
+1. Match score out of 100
+2. Missing skills
+3. Suggestions to improve resume
+4. Final advice
+
+Resume:
+{resume_text}
+
+Job Description:
+{job_desc}
+"""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            result = response.choices[0].message.content
+
+            st.subheader("📊 AI Analysis")
+            st.write(result)
+
+            score = extract_score(result)
+            st.progress(score)
+            st.success(f"Match Score: {score}%")
+
+# ------------------------------
+# 💬 Chat Assistant
+# ------------------------------
+st.markdown("---")
+st.subheader("💬 Ask Career Questions")
+
+user_input = st.text_input("Ask anything about jobs, resumes, or skills:")
+
+if st.button("Ask") and user_input:
+
+    chat_response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": user_input}
+        ]
+    )
+
+    st.write(chat_response.choices[0].message.content)st.set_page_config(page_title="AI Career Assistant", layout="wide")
 
 st.title("🚀 AI Career Assistant")
 st.markdown("### Get resume feedback, job matching, and career guidance")

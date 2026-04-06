@@ -8,14 +8,16 @@ import re
 # ------------------------------
 # CONFIG
 # ------------------------------
-st.set_page_config(page_title="PathAssistant", layout="wide")
-
+st.set_page_config(page_title="FastTrack AI", layout="wide")
 # ------------------------------
 # API KEY (FINAL FIX)
 # ------------------------------
-load_dotenv(dotenv_path=".env")
+import os
+from dotenv import load_dotenv
 
-api_key = os.getenv("OPENAI_API_KEY")
+load_dotenv()
+
+api_key = os.environ.get("OPENAI_API_KEY")
 
 if not api_key:
     st.error("API key missing")
@@ -58,7 +60,13 @@ def extract_score(text):
 # ------------------------------
 # HEADER
 # ------------------------------
-st.title("🚀 PathAssistant")
+# ------------------------------
+# HEADER
+# ------------------------------
+st.title("🚀 FastTrack AI")
+st.write("Fast-track your career with AI-powered resume optimization, job matching, and interview prep")
+
+st.divider()st.title("🚀 PathAssistant")
 st.write("Your AI career assistant — optimize resumes, explore roles, and prepare for interviews")
 
 st.divider()

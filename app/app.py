@@ -4,155 +4,126 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from PyPDF2 import PdfReader
 import re
-from docx import Document
-from scipy.io.wavfile import write
-import tempfile
 
 # ------------------------------
-# LOAD API KEY
+# CONFIG
+# ------------------------------
+st.set_page_config(page_title="PathAssistant", layout="wide")
+
+# ------------------------------
+# API KEY
 # ------------------------------
 load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
+
+try:
+    api_key = st.secrets["OPENAI_API_KEY"]
+except:
+    api_key = os.getenv("OPENAI_API_KEY")
 
 if not api_key:
-    st.error("❌ API key missing")
+    st.error("API key missing")
     st.stop()
 
 client = OpenAI(api_key=api_key)
 
 # ------------------------------
-# PDF READER
+# DARK UI
 # ------------------------------
-def extract_text_from_pdf(file):
+st.markdown("""
+<style>
+.main {
+    background-color: #0e1117;
+}
+h1, h2, h3 {
+    color: white;
+}
+p, div, label {
+    color: #d1d5db;
+    font-size: 16px;
+}
+.stButton>button {
+    background-color: #2563eb;
+    color: white;
+    border-radius: 8px;
+    padding: 10px 16px;
+}
+textarea {
+    border-radius: 8px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------------------
+# FUNCTIONS
+# ------------------------------
+def extract_text(file):
     reader = PdfReader(file)
     text = ""
     for page in reader.pages:
         text += page.extract_text() or ""
     return text
 
-# ------------------------------
-# SCORE EXTRACTOR
-# ------------------------------
 def extract_score(text):
     match = re.search(r"\b(\d{1,3})\b", text)
-    if match:
-        return min(int(match.group(1)), 100)
-    return 50
+    return min(int(match.group(1)), 100) if match else 50
 
 # ------------------------------
-# RESUME REWRITE
+# HEADER
 # ------------------------------
-def rewrite_resume(resume_text, job_desc):
-    prompt = f"""
-Rewrite this resume using SAME structure:
-- Summary
-- Education
-- Experience
-- Skills
+st.title("🚀 PathAssistant")
+st.write("Your AI career assistant — optimize resumes, explore roles, and prepare for interviews")
 
-Improve wording, make it ATS-friendly, tailor to job.
-
-Resume:
-{resume_text}
-
-Job:
-{job_desc}
-"""
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+st.divider()
 
 # ------------------------------
-# WORD EXPORT
+# INPUT
 # ------------------------------
-def create_word_doc(text):
-    doc = Document()
-    for line in text.split("\n"):
-        doc.add_paragraph(line)
-    return doc
+st.subheader("📄 Upload Resume")
+uploaded_file = st.file_uploader("Upload your resume (PDF)", type=["pdf"])
 
-# ------------------------------
-# MOCK INTERVIEW
-# ------------------------------
-def mock_interview(history, resume_text):
-    prompt = f"""
-You are a professional interviewer.
+if uploaded_file:
+    st.success("✅ Resume uploaded successfully")
+    resume = extract_text(uploaded_file)
 
-Resume:
-{resume_text}
+st.subheader("💼 Job Description")
+job_desc = st.text_area("Paste job description")
 
-Conversation:
-{history}
+col1, col2, col3 = st.columns(3)
 
-Ask the NEXT interview question only.
-"""
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
-
-# ------------------------------
-# VOICE RECORDING
-# ------------------------------
-def record_audio():
-    fs = 44100
-    seconds = 5
-
-    st.info("🎤 Recording...")
-    recording = sd.rec(int(seconds * fs), samplerate=fs, channels=1)
-    sd.wait()
-
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-    write(temp_file.name, fs, recording)
-
-    return temp_file.name
-
-# ------------------------------
-# UI
-# ------------------------------
-st.set_page_config(page_title="AI Career Assistant", layout="wide")
-
-st.title("🚀 AI Career Assistant")
-
-col1, col2 = st.columns(2)
-
-# Resume upload
 with col1:
-    st.subheader("📄 Upload Resume")
-    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+    analyze = st.button("Analyze Match")
 
-    resume_text = ""
-    if uploaded_file:
-        resume_text = extract_text_from_pdf(uploaded_file)
-        st.success("Resume uploaded!")
-
-# Job description
 with col2:
-    st.subheader("💼 Job Description")
-    job_desc = st.text_area("Paste job description")
+    suggest_jobs = st.button("Suggest Jobs")
+
+with col3:
+    generate_questions = st.button("Interview Prep")
+
+st.divider()
 
 # ------------------------------
-# MATCHING
+# ANALYSIS
 # ------------------------------
-if st.button("🎯 Match Resume to Job"):
-    if resume_text and job_desc:
+if uploaded_file and job_desc and analyze:
+
+    st.subheader("🎯 Match Analysis")
+
+    with st.spinner("Analyzing..."):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{
                 "role": "user",
                 "content": f"""
-Compare resume and job.
+Analyze this resume vs job description.
 
-Give:
-- Match score
-- Missing skills
-- Suggestions
+Return:
+1. Match score (0-100)
+2. Missing skills
+3. Resume improvements (bullet points)
+4. Suggestions to improve experience
 
 Resume:
-{resume_text}
+{resume}
 
 Job:
 {job_desc}
@@ -160,95 +131,138 @@ Job:
             }]
         )
 
-        result = response.choices[0].message.content
+        output = response.choices[0].message.content
+        st.write(output)
 
-        st.write(result)
-
-        score = extract_score(result)
-        st.progress(score)
-        st.success(f"Match Score: {score}%")
-    else:
-        st.warning("Upload resume + paste job")
+        score = extract_score(output)
+        st.progress(score / 100)
+        st.write(f"Match Score: {score}%")
 
 # ------------------------------
-# RESUME IMPROVER
+# JOB SUGGESTIONS
 # ------------------------------
-if st.button("✍️ Improve Resume"):
-    if resume_text:
-        improved = rewrite_resume(resume_text, job_desc)
+if uploaded_file and suggest_jobs:
 
-        st.text_area("Improved Resume", improved, height=400)
+    st.subheader("💼 Recommended Roles")
 
-        doc = create_word_doc(improved)
-        file_path = "resume.docx"
-        doc.save(file_path)
+    with st.spinner("Thinking..."):
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a friendly career coach."},
+                {"role": "user", "content": f"""
+Based on this resume, suggest 5 job roles.
 
-        with open(file_path, "rb") as f:
-            st.download_button("📥 Download Word Resume", f, "resume.docx")
-    else:
-        st.warning("Upload resume first")
+Include:
+- Job title
+- Why it's a good fit
+- Key skills needed
+
+Resume:
+{resume}
+"""}
+            ]
+        )
+
+        st.write(response.choices[0].message.content)
+
+# ------------------------------
+# INTERVIEW SWIPE CARDS
+# ------------------------------
+if "questions" not in st.session_state:
+    st.session_state.questions = []
+    st.session_state.q_index = 0
+
+if uploaded_file and generate_questions:
+
+    with st.spinner("Generating questions..."):
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{
+                "role": "user",
+                "content": f"""
+Generate 5 strong interview questions (behavioral + technical).
+
+Resume:
+{resume}
+"""
+            }]
+        )
+
+        questions = response.choices[0].message.content.split("\n")
+        st.session_state.questions = [q for q in questions if q.strip()]
+        st.session_state.q_index = 0
+
+if st.session_state.questions:
+
+    st.subheader("🔥 Interview Practice")
+
+    q = st.session_state.questions[st.session_state.q_index]
+
+    st.markdown(f"""
+    <div style="
+        background-color:#1f2937;
+        padding:30px;
+        border-radius:12px;
+        text-align:center;
+        font-size:22px;
+        margin-bottom:20px;
+    ">
+    💡 {q}
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1,2,1])
+
+    with col1:
+        if st.button("❌ Skip"):
+            st.session_state.q_index += 1
+
+    with col2:
+        if st.button("💬 Get Tip"):
+            tip = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{
+                    "role": "user",
+                    "content": f"Give a strong answer tip for:\n{q}"
+                }]
+            )
+            st.info(tip.choices[0].message.content)
+
+    with col3:
+        if st.button("✅ Got It"):
+            st.session_state.q_index += 1
+
+    if st.session_state.q_index >= len(st.session_state.questions):
+        st.session_state.q_index = 0
 
 # ------------------------------
 # CHATBOT
 # ------------------------------
-st.markdown("---")
+st.divider()
 st.subheader("💬 Career Chat")
 
-user_input = st.text_input("Ask anything")
+user_input = st.text_input("Ask me anything about your career 👇")
 
-if st.button("Ask") and user_input:
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": user_input}]
-    )
+if st.button("Ask AI"):
+    if user_input:
+        with st.spinner("Thinking..."):
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """
+You are a friendly career coach.
 
-    st.write(response.choices[0].message.content)
+Talk like a helpful friend:
+- Be casual and encouraging
+- Give simple advice
+- Avoid robotic tone
+"""
+                    },
+                    {"role": "user", "content": user_input}
+                ]
+            )
 
-# ------------------------------
-# 🎤 VOICE CHAT
-# ------------------------------
-st.markdown("---")
-st.subheader("🎤 Voice Assistant")
-
-if st.button("🎤 Record Voice"):
-    audio_file = record_audio()
-
-    with open(audio_file, "rb") as f:
-        transcript = client.audio.transcriptions.create(
-            model="gpt-4o-mini-transcribe",
-            file=f
-        )
-
-    st.write("You said:", transcript.text)
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": transcript.text}]
-    )
-
-    st.write(response.choices[0].message.content)
-
-# ------------------------------
-# MOCK INTERVIEW
-# ------------------------------
-st.markdown("---")
-st.subheader("🎯 Mock Interview")
-
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-if st.button("Start Interview"):
-    st.session_state.history = []
-    q = mock_interview("", resume_text)
-    st.session_state.history.append(q)
-    st.write(q)
-
-answer = st.text_input("Your answer")
-
-if st.button("Submit Answer") and answer:
-    st.session_state.history.append(answer)
-
-    next_q = mock_interview(st.session_state.history, resume_text)
-    st.session_state.history.append(next_q)
-
-    st.write(next_q)
+            st.write(response.choices[0].message.content)

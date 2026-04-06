@@ -5,7 +5,6 @@ from openai import OpenAI
 from PyPDF2 import PdfReader
 import re
 from docx import Document
-import sounddevice as sd
 from scipy.io.wavfile import write
 import tempfile
 

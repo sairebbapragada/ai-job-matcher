@@ -11,14 +11,11 @@ import re
 st.set_page_config(page_title="PathAssistant", layout="wide")
 
 # ------------------------------
-# API KEY
+# API KEY (FINAL FIX)
 # ------------------------------
-load_dotenv()
+load_dotenv(dotenv_path=".env")
 
-try:
-    api_key = st.secrets["OPENAI_API_KEY"]
-except:
-    api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("OPENAI_API_KEY")
 
 if not api_key:
     st.error("API key missing")
@@ -27,29 +24,20 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 # ------------------------------
-# DARK UI
+# UI STYLE
 # ------------------------------
 st.markdown("""
 <style>
-.main {
-    background-color: #0e1117;
-}
-h1, h2, h3 {
-    color: white;
-}
-p, div, label {
-    color: #d1d5db;
-    font-size: 16px;
-}
+.main { background-color: #0e1117; }
+h1, h2, h3 { color: white; }
+p, div, label { color: #d1d5db; font-size: 16px; }
 .stButton>button {
     background-color: #2563eb;
     color: white;
     border-radius: 8px;
     padding: 10px 16px;
 }
-textarea {
-    border-radius: 8px !important;
-}
+textarea { border-radius: 8px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -81,6 +69,7 @@ st.divider()
 st.subheader("📄 Upload Resume")
 uploaded_file = st.file_uploader("Upload your resume (PDF)", type=["pdf"])
 
+resume = ""
 if uploaded_file:
     st.success("✅ Resume uploaded successfully")
     resume = extract_text(uploaded_file)
@@ -167,7 +156,7 @@ Resume:
         st.write(response.choices[0].message.content)
 
 # ------------------------------
-# INTERVIEW SWIPE CARDS
+# INTERVIEW CARDS (SWIPE STYLE)
 # ------------------------------
 if "questions" not in st.session_state:
     st.session_state.questions = []
@@ -181,7 +170,7 @@ if uploaded_file and generate_questions:
             messages=[{
                 "role": "user",
                 "content": f"""
-Generate 5 strong interview questions (behavioral + technical).
+Generate 5 strong interview questions.
 
 Resume:
 {resume}

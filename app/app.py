@@ -66,11 +66,9 @@ def extract_score(text):
 st.title("🚀 FastTrack AI")
 st.write("Fast-track your career with AI-powered resume optimization, job matching, and interview prep")
 
-st.divider()st.title("🚀 FastTrack AI")
-st.write("Your AI career assistant — optimize resumes, explore roles, and prepare for interviews")
-
 st.divider()
 
+st.title("🚀 FastTrack AI")
 # ------------------------------
 # INPUT
 # ------------------------------
